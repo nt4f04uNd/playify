@@ -1,9 +1,12 @@
 import MediaPlayer
 
+// Sweyer stores source IDs in Dart's signed 64-bit int. Reinterpret Apple's
+// UInt64 persistent ID so all 64 bits survive the String -> Dart int round trip.
 func dartIdentifier(_ identifier: MPMediaEntityPersistentID) -> String {
     String(Int64(bitPattern: identifier))
 }
 
+// Restore the original UInt64 bit pattern before querying MediaPlayer.
 func mediaIdentifier(from dartIdentifier: String) -> MPMediaEntityPersistentID? {
     guard let identifier = Int64(dartIdentifier) else {
         return nil
