@@ -8,6 +8,7 @@ public class SwiftPlayifyPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
         player.stateUpdateDelegate = updateHandler
     }
     private var eventSink: FlutterEventSink?
+    private let artworkCache = NSCache<NSString, NSData>()
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "com.kaya.playify/playify", binaryMessenger: registrar.messenger())
@@ -26,18 +27,6 @@ public class SwiftPlayifyPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
         if #available(iOS 10.3, *) {
             if(call.method == "play"){
                 player.play()
-                result(nil)
-            }
-            else if(call.method == "playItem"){
-                guard let args = call.arguments as? [String: Any] else {
-                    result(FlutterError(code: "invalidArgs", message: "Invalid Arguments", details: "The arguments were not provided!"))
-                    return
-                }
-                guard let songID = args["songID"] as? String else {
-                    result(FlutterError(code: "invalidArgs", message: "Invalid Arguments", details: "The parameter songID was not provided!"))
-                    return
-                }
-                player.playItem(songID: songID)
                 result(nil)
             }
             else if(call.method == "pause") {
@@ -151,8 +140,23 @@ public class SwiftPlayifyPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
                 }
                 let startID = args["startID"] as? String
                 do {
-                    try player.setQueue(songIDs: songIDs, startPlaying: startPlaying, startID: startID)
-                    result(nil)
+                    try player.setQueue(
+                        songIDs: songIDs,
+                        startPlaying: startPlaying,
+                        startID: startID
+                    ) { error in
+                        DispatchQueue.main.async {
+                            if let error = error {
+                                result(FlutterError(
+                                    code: "setQueueError",
+                                    message: "Set Queue Error",
+                                    details: error.localizedDescription
+                                ))
+                            } else {
+                                result(nil)
+                            }
+                        }
+                    }
                 } catch PlayifyError.runtimeError(let errorMessage) {
                     result(FlutterError(code: "setQueueError", message: "Set Queue Error", details: errorMessage))
                 } catch {
@@ -184,9 +188,45 @@ public class SwiftPlayifyPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
 
                 
                 var data = metadata.toDict()
-                data["image"] = imgdata ?? []
+                if let imgdata = imgdata {
+                    data["image"] = imgdata
+                }
                 
                 result(data)
+            }
+            else if(call.method == "getSongs") {
+                result(player.getAllSongs().map { $0.toDict() })
+            }
+            else if(call.method == "getArtwork") {
+                guard let args = call.arguments as? [String: Any],
+                      let songID = args["songID"] as? String,
+                      let width = args["width"] as? NSNumber,
+                      let height = args["height"] as? NSNumber else {
+                    result(FlutterError(
+                        code: "invalidArgs",
+                        message: "Invalid Arguments",
+                        details: "songID, width, and height are required."
+                    ))
+                    return
+                }
+                guard let mediaItem = player.getMediaItem(songID: songID),
+                      let artwork = mediaItem.artwork else {
+                    result(nil)
+                    return
+                }
+                let cacheKey = "\(dartIdentifier(mediaItem.albumPersistentID)):\(width.intValue)x\(height.intValue)" as NSString
+                if let cachedArtwork = artworkCache.object(forKey: cacheKey) {
+                    result(cachedArtwork as Data)
+                    return
+                }
+                guard
+                      let image = artwork.image(at: CGSize(width: width.intValue, height: height.intValue)),
+                      let imageData = image.jpegData(compressionQuality: 0.85) else {
+                    result(nil)
+                    return
+                }
+                artworkCache.setObject(imageData as NSData, forKey: cacheKey)
+                result(imageData)
             }
             else if(call.method == "getAllSongs"){
                 let allsongs = player.getAllSongs()
@@ -224,7 +264,9 @@ public class SwiftPlayifyPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
                         //Convert image to Uint8 Array to send to Flutter (Taken from https://stackoverflow.com/a/29734526)
                         let imgdata = resizedImage?.jpegData(compressionQuality: 0.85)
                         
-                        songDict["image"] = imgdata ?? []
+                        if let imgdata = imgdata {
+                            songDict["image"] = imgdata
+                        }
                         mysongs.append(songDict)
                         albums.append(["albumTitle": metadata.albumTitle ?? "", "artistName": metadata.artist ?? ""])
                     }
@@ -239,7 +281,7 @@ public class SwiftPlayifyPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
                 let res: [[String: Any]] = playlists?.map({ playlist in
                     [
                         "title": playlist.value(forProperty: MPMediaPlaylistPropertyName) ?? "",
-                        "playlistID": playlist.persistentID,
+                        "playlistID": dartIdentifier(playlist.persistentID),
                         "songs": playlist.items.map({song in
                             song.toDict()
                         })
@@ -320,10 +362,15 @@ public class SwiftPlayifyPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
                     //Convert image to Uint8 Array to send to Flutter
                     let imgdata = resizedImage?.jpegData(compressionQuality: 0.85)
                     
-                    dict["image"] = imgdata ?? []
+                    if let imgdata = imgdata {
+                        dict["image"] = imgdata
+                    }
                     return dict
                 }
                 result(songs)
+            }
+            else {
+                result(FlutterMethodNotImplemented)
             }
         }
         else {

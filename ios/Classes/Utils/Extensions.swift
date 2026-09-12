@@ -1,11 +1,23 @@
 import MediaPlayer
 
+func dartIdentifier(_ identifier: MPMediaEntityPersistentID) -> String {
+    String(Int64(bitPattern: identifier))
+}
+
+func mediaIdentifier(from dartIdentifier: String) -> MPMediaEntityPersistentID? {
+    guard let identifier = Int64(dartIdentifier) else {
+        return nil
+    }
+    return UInt64(bitPattern: identifier)
+}
+
 @available(iOS 10.0, *)
 extension MPMediaItem {
     ///Returns a dicationary without the image data set.
     func toDict() -> [String: Any] {
         return [
             "artist": artist ?? "",
+            "albumArtist": albumArtist ?? "",
             "songTitle": title ?? "",
             "albumTitle": albumTitle ?? "",
             "trackNumber": albumTrackNumber,
@@ -17,7 +29,12 @@ extension MPMediaItem {
             "discCount": discCount,
             "discNumber": discNumber,
             "isExplicitItem": isExplicitItem,
-            "songID": persistentID,
+            "songID": dartIdentifier(persistentID),
+            "albumID": dartIdentifier(albumPersistentID),
+            "artistID": dartIdentifier(artistPersistentID),
+            "albumArtistID": dartIdentifier(albumArtistPersistentID),
+            "genreID": dartIdentifier(genrePersistentID),
+            "dateAdded": Int64(dateAdded.timeIntervalSince1970 * 1000),
             "playbackDuration": playbackDuration
         ]
     }

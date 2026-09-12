@@ -1,77 +1,102 @@
-import 'package:flutter/material.dart';
-
 class Song {
-  Song(
-      {required this.songID,
-      required this.title,
-      required this.artistName,
-      required this.albumTitle,
-      required this.trackNumber,
-      required this.playCount,
-      required this.discNumber,
-      required this.genre,
-      required this.releaseDate,
-      required this.duration,
-      required this.isExplicit});
+  const Song({
+    required this.songID,
+    required this.albumID,
+    required this.artistID,
+    required this.albumArtistID,
+    required this.genreID,
+    required this.title,
+    required this.artistName,
+    required this.albumArtistName,
+    required this.albumTitle,
+    required this.trackNumber,
+    required this.playCount,
+    required this.discNumber,
+    required this.genre,
+    required this.releaseDate,
+    required this.dateAdded,
+    required this.duration,
+    required this.isExplicit,
+  });
+
+  /// The persistent ID of the album containing this song.
+  final String albumID;
+
+  /// The persistent ID of this song's artist.
+  final String artistID;
+
+  /// The persistent ID of this song's album artist.
+  final String albumArtistID;
+
+  /// The persistent ID of this song's genre.
+  final String genreID;
 
   ///The title of the album.
-  String albumTitle;
+  final String albumTitle;
 
   ///The name of the song artist.
-  String artistName;
+  final String artistName;
+
+  /// The primary artist of the album containing this song.
+  final String albumArtistName;
 
   ///The release date of the song.
-  DateTime releaseDate;
+  final DateTime releaseDate;
+
+  /// The date this song was added to the media library.
+  final DateTime dateAdded;
 
   ///The genre of the song.
-  String genre;
+  final String genre;
 
   ///The title of the song.
-  String title;
+  final String title;
 
   ///The Persistent Song ID of the song. Used to play or enqueue a song.
-  String songID;
+  final String songID;
 
   ///The track number of the song in an album.
-  int trackNumber;
+  final int trackNumber;
 
   ///The amount of times the song has been played.
-  int playCount;
+  final int playCount;
 
   ///The disc number the song belongs to in an album.
-  int discNumber;
+  final int discNumber;
 
   ///The total duration of the song.
-  double duration;
+  final double duration;
 
   ///Shows if the song is explicit.
-  bool isExplicit;
+  final bool isExplicit;
 
   static Song fromJson(Map<String, dynamic> map) => Song(
-      albumTitle: map['albumTitle'] ?? '',
-      duration: map['playbackDuration'] ?? '',
-      title: map['songTitle'] ?? '',
-      trackNumber: map['trackNumber'] ?? 0,
-      discNumber: map['discNumber'] ?? 0,
-      isExplicit: map['isExplicitItem'] ?? false,
-      genre: map['genre'] ?? '',
-      releaseDate: DateTime.fromMillisecondsSinceEpoch(map['releaseDate'] ?? 0),
-      playCount: map['playCount'] ?? 0,
-      artistName: map['artist'] ?? '',
-      songID: (map['songID'] ?? '').toString());
+        albumTitle: map['albumTitle'] as String? ?? '',
+        albumID: (map['albumID'] ?? 0).toString(),
+        artistID: (map['artistID'] ?? 0).toString(),
+        albumArtistID: (map['albumArtistID'] ?? 0).toString(),
+        genreID: (map['genreID'] ?? 0).toString(),
+        duration: (map['playbackDuration'] as num?)?.toDouble() ?? 0,
+        title: map['songTitle'] as String? ?? '',
+        trackNumber: (map['trackNumber'] as num?)?.toInt() ?? 0,
+        discNumber: (map['discNumber'] as num?)?.toInt() ?? 0,
+        isExplicit: map['isExplicitItem'] as bool? ?? false,
+        genre: map['genre'] as String? ?? '',
+        releaseDate: DateTime.fromMillisecondsSinceEpoch(
+          (map['releaseDate'] as num?)?.toInt() ?? 0,
+        ),
+        dateAdded: DateTime.fromMillisecondsSinceEpoch(
+          (map['dateAdded'] as num?)?.toInt() ?? 0,
+        ),
+        playCount: (map['playCount'] as num?)?.toInt() ?? 0,
+        artistName: map['artist'] as String? ?? '',
+        albumArtistName: map['albumArtist'] as String? ?? '',
+        songID: (map['songID'] ?? 0).toString(),
+      );
 
   @override
   String toString() {
-    return 'Song Title: ' +
-        title +
-        ', Album Title: ' +
-        albumTitle +
-        ', Artist Name: ' +
-        artistName +
-        ', Duration: ' +
-        duration.toString() +
-        ', SongID: ' +
-        songID +
-        '\n';
+    return 'Song Title: $title, Album Title: $albumTitle, Artist Name: $artistName, '
+        'Duration: $duration, SongID: $songID\n';
   }
 }

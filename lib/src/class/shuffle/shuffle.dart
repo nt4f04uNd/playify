@@ -1,1 +1,1 @@
-enum Shuffle { off, songs }
+enum Shuffle { off, songs, albums }
