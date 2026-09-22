@@ -18,7 +18,7 @@ func mediaIdentifier(from dartIdentifier: String) -> MPMediaEntityPersistentID? 
 extension MPMediaItem {
     ///Returns a dicationary without the image data set.
     func toDict() -> [String: Any] {
-        return [
+        var dictionary: [String: Any] = [
             "artist": artist ?? "",
             "albumArtist": albumArtist ?? "",
             "songTitle": title ?? "",
@@ -27,19 +27,29 @@ extension MPMediaItem {
             "albumTrackNumber": albumTrackNumber,
             "albumTrackCount": albumTrackCount,
             "genre": genre ?? "",
-            "releaseDate": Int64((releaseDate?.timeIntervalSince1970 ?? 0) * 1000),
             "playCount": playCount,
             "discCount": discCount,
             "discNumber": discNumber,
             "isExplicitItem": isExplicitItem,
             "songID": dartIdentifier(persistentID),
-            "albumID": dartIdentifier(albumPersistentID),
-            "artistID": dartIdentifier(artistPersistentID),
-            "albumArtistID": dartIdentifier(albumArtistPersistentID),
-            "genreID": dartIdentifier(genrePersistentID),
             "dateAdded": Int64(dateAdded.timeIntervalSince1970 * 1000),
             "playbackDuration": playbackDuration
         ]
+        if let releaseDate = releaseDate {
+            dictionary["releaseDate"] = Int64(releaseDate.timeIntervalSince1970 * 1000)
+        }
+        dictionary["albumID"] = optionalDartIdentifier(forProperty: MPMediaItemPropertyAlbumPersistentID)
+        dictionary["artistID"] = optionalDartIdentifier(forProperty: MPMediaItemPropertyArtistPersistentID)
+        dictionary["albumArtistID"] = optionalDartIdentifier(forProperty: MPMediaItemPropertyAlbumArtistPersistentID)
+        dictionary["genreID"] = optionalDartIdentifier(forProperty: MPMediaItemPropertyGenrePersistentID)
+        return dictionary
+    }
+
+    private func optionalDartIdentifier(forProperty property: String) -> String? {
+        guard let identifier = value(forProperty: property) as? NSNumber else {
+            return nil
+        }
+        return dartIdentifier(identifier.uint64Value)
     }
 }
 

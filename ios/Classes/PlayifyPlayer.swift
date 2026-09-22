@@ -55,7 +55,12 @@ public class PlayifyPlayer {
             forProperty: MPMediaItemPropertyPersistentID,
             comparisonType: .equalTo
         )
-        return MPMediaQuery(filterPredicates: Set([songFilter])).items?.first
+        let items = MPMediaQuery(filterPredicates: Set([songFilter])).items ?? []
+        guard items.count == 1 else {
+            assert(items.isEmpty, "A persistent media ID unexpectedly matched multiple items.")
+            return nil
+        }
+        return items[0]
     }
 
     private func getMediaItemsWithIDs(songIDs: [String]) -> [MPMediaItem] {
