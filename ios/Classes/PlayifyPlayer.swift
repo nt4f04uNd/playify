@@ -23,7 +23,7 @@ public class PlayifyPlayer {
         }
         let songs = getMediaItemsWithIDs(songIDs: songIDs)
         guard songs.count == songIDs.count else {
-            throw PlayifyError.runtimeError("One or more songs could not be found in the media library.")
+            throw PlayifyError.runtimeError("One or more song IDs did not resolve to exactly one media item.")
         }
         
         let descriptor = MPMusicPlayerMediaItemQueueDescriptor(itemCollection: MPMediaItemCollection(items: songs))
