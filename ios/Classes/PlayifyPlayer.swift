@@ -167,6 +167,19 @@ public class PlayifyPlayer {
             return nil
         }
     }
+
+    ///Play a song with an ID.
+    func playItem(songID: String){
+        let song = getMediaItemsWithIDs(songIDs: [songID])
+        let descriptor = MPMusicPlayerMediaItemQueueDescriptor(itemCollection: MPMediaItemCollection(items: song))
+
+        player.setQueue(with: descriptor)
+        player.prepareToPlay(completionHandler: {error in
+            if error == nil {
+                self.player.play()
+            }
+        })
+    }
     
     //Get songs by genre.
     func getSongsByGenre(genre: String) -> [MPMediaItem] {

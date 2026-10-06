@@ -29,6 +29,18 @@ public class SwiftPlayifyPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
                 player.play()
                 result(nil)
             }
+            else if(call.method == "playItem"){
+                guard let args = call.arguments as? [String: Any] else {
+                    result(FlutterError(code: "invalidArgs", message: "Invalid Arguments", details: "The arguments were not provided!"))
+                    return
+                }
+                guard let songID = args["songID"] as? String else {
+                    result(FlutterError(code: "invalidArgs", message: "Invalid Arguments", details: "The parameter songID was not provided!"))
+                    return
+                }
+                player.playItem(songID: songID)
+                result(nil)
+            }
             else if(call.method == "pause") {
                 player.pause()
                 result(nil)
