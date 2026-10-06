@@ -76,20 +76,17 @@ class Song {
         artistID: map['artistID']?.toString(),
         albumArtistID: map['albumArtistID']?.toString(),
         genreID: map['genreID']?.toString(),
-        duration: (map['playbackDuration'] as num?)?.toDouble() ?? 0,
+        duration: map['playbackDuration'] as double,
         title: map['songTitle'] as String? ?? '',
-        trackNumber: (map['trackNumber'] as num?)?.toInt() ?? 0,
-        discNumber: (map['discNumber'] as num?)?.toInt() ?? 0,
+        trackNumber: map['trackNumber'] as int,
+        discNumber: map['discNumber'] as int,
         isExplicit: map['isExplicitItem'] as bool? ?? false,
         genre: map['genre'] as String? ?? '',
-        releaseDate: map['releaseDate'] is num
-            ? DateTime.fromMillisecondsSinceEpoch(
-                (map['releaseDate'] as num).toInt())
-            : null,
+        releaseDate: _optionalDate(map, 'releaseDate'),
         dateAdded: DateTime.fromMillisecondsSinceEpoch(
-          _requiredNumber(map, 'dateAdded').toInt(),
+          _requiredInt(map, 'dateAdded'),
         ),
-        playCount: (map['playCount'] as num?)?.toInt() ?? 0,
+        playCount: map['playCount'] as int,
         artistName: map['artist'] as String? ?? '',
         albumArtistName: map['albumArtist'] as String? ?? '',
         songID: _requiredID(map, 'songID'),
@@ -103,12 +100,23 @@ class Song {
     return value.toString();
   }
 
-  static num _requiredNumber(Map<String, dynamic> map, String key) {
+  static int _requiredInt(Map<String, dynamic> map, String key) {
     final value = map[key];
-    if (value is! num) {
+    if (value is! int) {
       throw FormatException('Missing or invalid required song field: $key');
     }
     return value;
+  }
+
+  static DateTime? _optionalDate(Map<String, dynamic> map, String key) {
+    final value = map[key];
+    if (value == null) {
+      return null;
+    }
+    if (value is! int) {
+      throw FormatException('Invalid song field: $key');
+    }
+    return DateTime.fromMillisecondsSinceEpoch(value);
   }
 
   @override
