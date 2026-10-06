@@ -132,8 +132,8 @@ class Playify {
 
   ///Get the playback time of the current song in the queue.
   Future<double> getPlaybackTime() async {
-    final result = await playerChannel.invokeMethod<num>('getPlaybackTime');
-    return result?.toDouble() ?? 0;
+    final result = await playerChannel.invokeMethod('getPlaybackTime');
+    return result;
   }
 
   ///Set the playback [time] of the current song in the queue.
