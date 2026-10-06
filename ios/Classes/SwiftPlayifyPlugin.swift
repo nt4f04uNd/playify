@@ -8,7 +8,6 @@ public class SwiftPlayifyPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
         player.stateUpdateDelegate = updateHandler
     }
     private var eventSink: FlutterEventSink?
-    private let artworkCache = NSCache<NSString, NSData>()
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "com.kaya.playify/playify", binaryMessenger: registrar.messenger())
@@ -238,11 +237,6 @@ public class SwiftPlayifyPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
                     result(nil)
                     return
                 }
-                let cacheKey = "\(dartIdentifier(mediaItem.albumPersistentID)):\(width.intValue)x\(height.intValue)" as NSString
-                if let cachedArtwork = artworkCache.object(forKey: cacheKey) {
-                    result(cachedArtwork as Data)
-                    return
-                }
                 guard
                       let image = artwork.image(at: CGSize(width: width.intValue, height: height.intValue)),
                       let imageData = resizeImage(
@@ -252,7 +246,6 @@ public class SwiftPlayifyPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
                     result(nil)
                     return
                 }
-                artworkCache.setObject(imageData as NSData, forKey: cacheKey)
                 result(imageData)
             }
             else if(call.method == "getAllSongs"){
