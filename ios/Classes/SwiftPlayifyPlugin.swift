@@ -245,7 +245,10 @@ public class SwiftPlayifyPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
                 }
                 guard
                       let image = artwork.image(at: CGSize(width: width.intValue, height: height.intValue)),
-                      let imageData = image.jpegData(compressionQuality: 0.85) else {
+                      let imageData = resizeImage(
+                          image: image,
+                          targetSize: CGSize(width: width.intValue, height: height.intValue)
+                      ).jpegData(compressionQuality: 0.85) else {
                     result(nil)
                     return
                 }
