@@ -66,8 +66,14 @@ public class SwiftPlayifyPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
                     result(FlutterError(code: "invalidArgs", message: "Invalid Arguments", details: "The parameter mode was not provided!"))
                     return
                 }
-                player.setShuffleMode(mode: mode)
-                result(nil)
+                do {
+                    try player.setShuffleMode(mode: mode)
+                    result(nil)
+                } catch PlayifyError.runtimeError(let errorMessage) {
+                    result(FlutterError(code: "invalidArgs", message: "Invalid Arguments", details: errorMessage))
+                } catch {
+                    result(FlutterError(code: "invalidArgs", message: "Invalid Arguments", details: error.localizedDescription))
+                }
             }
             else if(call.method == "setRepeatMode") {
                 guard let args = call.arguments as? [String: Any] else {
@@ -78,8 +84,14 @@ public class SwiftPlayifyPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
                     result(FlutterError(code: "invalidArgs", message: "Invalid Arguments", details: "The parameter mode was not provided!"))
                     return
                 }
-                player.setRepeatMode(mode: mode)
-                result(nil)
+                do {
+                    try player.setRepeatMode(mode: mode)
+                    result(nil)
+                } catch PlayifyError.runtimeError(let errorMessage) {
+                    result(FlutterError(code: "invalidArgs", message: "Invalid Arguments", details: errorMessage))
+                } catch {
+                    result(FlutterError(code: "invalidArgs", message: "Invalid Arguments", details: error.localizedDescription))
+                }
             }
             else if(call.method == "getPlaybackTime") {
                 let time = player.getPlaybackTime()

@@ -113,7 +113,7 @@ public class PlayifyPlayer {
     }
     
     ///Set a shuffle mode.
-    func setShuffleMode(mode: String){
+    func setShuffleMode(mode: String) throws {
         switch mode {
         case "off":
             player.shuffleMode = .off
@@ -122,7 +122,7 @@ public class PlayifyPlayer {
         case "albums":
             player.shuffleMode = .albums
         default:
-            break
+            throw PlayifyError.runtimeError("Unsupported shuffle mode: \(mode)")
         }
     }
     
@@ -141,7 +141,7 @@ public class PlayifyPlayer {
     }
     
     ///Set a repeat mode.
-    func setRepeatMode(mode: String){
+    func setRepeatMode(mode: String) throws {
         switch mode {
         case "none":
             player.repeatMode = .none
@@ -150,7 +150,7 @@ public class PlayifyPlayer {
         case "all":
             player.repeatMode = .all
         default:
-            break
+            throw PlayifyError.runtimeError("Unsupported repeat mode: \(mode)")
         }
     }
     
