@@ -83,10 +83,11 @@ class Song {
         isExplicit: map['isExplicitItem'] as bool? ?? false,
         genre: map['genre'] as String? ?? '',
         releaseDate: map['releaseDate'] is num
-            ? DateTime.fromMillisecondsSinceEpoch((map['releaseDate'] as num).toInt())
+            ? DateTime.fromMillisecondsSinceEpoch(
+                (map['releaseDate'] as num).toInt())
             : null,
         dateAdded: DateTime.fromMillisecondsSinceEpoch(
-          (map['dateAdded'] as num?)?.toInt() ?? 0,
+          _requiredNumber(map, 'dateAdded').toInt(),
         ),
         playCount: (map['playCount'] as num?)?.toInt() ?? 0,
         artistName: map['artist'] as String? ?? '',
@@ -100,6 +101,14 @@ class Song {
       throw FormatException('Missing required song field: $key');
     }
     return value.toString();
+  }
+
+  static num _requiredNumber(Map<String, dynamic> map, String key) {
+    final value = map[key];
+    if (value is! num) {
+      throw FormatException('Missing or invalid required song field: $key');
+    }
+    return value;
   }
 
   @override
