@@ -167,7 +167,6 @@ class Playify {
     final nativeMode = switch (mode) {
       Shuffle.off => 'off',
       Shuffle.songs => 'songs',
-      Shuffle.albums => 'albums',
     };
     await playerChannel.invokeMethod('setShuffleMode', <String, dynamic>{
       'mode': nativeMode,
@@ -180,7 +179,6 @@ class Playify {
     return switch (mode) {
       'off' => Shuffle.off,
       'songs' => Shuffle.songs,
-      'albums' => Shuffle.albums,
       _ => throw StateError('Invalid shuffle mode: $mode'),
     };
   }

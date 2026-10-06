@@ -119,8 +119,6 @@ public class PlayifyPlayer {
             player.shuffleMode = .off
         case "songs":
             player.shuffleMode = .songs
-        case "albums":
-            player.shuffleMode = .albums
         default:
             throw PlayifyError.runtimeError("Unsupported shuffle mode: \(mode)")
         }
@@ -131,10 +129,10 @@ public class PlayifyPlayer {
         switch player.shuffleMode {
         case .songs:
             return "songs"
-        case .albums:
-            return "albums"
         case .off, .default:
             return "off"
+        case .albums:
+            return nil
         @unknown default:
             return nil
         }
