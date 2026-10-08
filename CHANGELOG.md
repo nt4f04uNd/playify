@@ -1,3 +1,10 @@
+## 2.2.1+sweyer.1
+
+- Removed Android support from the Sweyer-maintained fork.
+- Added lightweight song metadata and on-demand artwork APIs.
+- Added persistent album, artist, and genre identifiers.
+- Updated Flutter, Dart, CocoaPods, and iOS platform metadata.
+
 ## 2.2.1
 
 - Fixed crash when album art is empty.

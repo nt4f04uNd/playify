@@ -10,13 +10,21 @@ public class PlayifyPlayer {
     var stateUpdateDelegate: StateUpdateDelegate?
 
     ///Set the queue with unique song ids.
-    func setQueue(songIDs: [String], startPlaying: Bool?, startID: String?) throws {
+    func setQueue(
+        songIDs: [String],
+        startPlaying: Bool,
+        startID: String?,
+        completionHandler: @escaping (Error?) -> Void
+    ) throws {
         if let startID = startID {
             if !songIDs.contains(startID) {
                 throw PlayifyError.runtimeError("songIDs does not contain startID!")
             }
         }
         let songs = getMediaItemsWithIDs(songIDs: songIDs)
+        guard songs.count == songIDs.count else {
+            throw PlayifyError.runtimeError("One or more song IDs did not resolve to exactly one media item.")
+        }
         
         let descriptor = MPMusicPlayerMediaItemQueueDescriptor(itemCollection: MPMediaItemCollection(items: songs))
         
@@ -29,31 +37,34 @@ public class PlayifyPlayer {
         
         player.setQueue(with: descriptor)
         
-        if let startPlaying = startPlaying {
-            if(startPlaying){
-                player.prepareToPlay(completionHandler: {error in
-                    if error == nil {
-                        self.play()
-                    }
-                })
+        player.prepareToPlay { error in
+            if error == nil && startPlaying {
+                self.play()
             }
-            else {
-                player.prepareToPlay()
-            }
+            completionHandler(error)
         }
     }
     
     ///Get MediaItems via a PersistentID using predicates and queries.
-    private func getMediaItemsWithIDs(songIDs: [String]) -> [MPMediaItem] {
-        var songs: [MPMediaItem] = []
-        for songID in songIDs {
-            let songFilter = MPMediaPropertyPredicate(value: songID, forProperty: MPMediaItemPropertyPersistentID, comparisonType: .equalTo)
-            let query = MPMediaQuery(filterPredicates: Set([songFilter]))
-            if let items = query.items, let first = items.first {
-                songs.append(first)
-            }
+    func getMediaItem(songID: String) -> MPMediaItem? {
+        guard let identifier = mediaIdentifier(from: songID) else {
+            return nil
         }
-        return songs
+        let songFilter = MPMediaPropertyPredicate(
+            value: NSNumber(value: identifier),
+            forProperty: MPMediaItemPropertyPersistentID,
+            comparisonType: .equalTo
+        )
+        let items = MPMediaQuery(filterPredicates: Set([songFilter])).items ?? []
+        guard items.count == 1 else {
+            assert(items.isEmpty, "A persistent media ID unexpectedly matched multiple items.")
+            return nil
+        }
+        return items[0]
+    }
+
+    private func getMediaItemsWithIDs(songIDs: [String]) -> [MPMediaItem] {
+        songIDs.compactMap { getMediaItem(songID: $0) }
     }
     
     ///Skip to the beginning of the queue.
@@ -102,58 +113,64 @@ public class PlayifyPlayer {
     }
     
     ///Set a shuffle mode.
-    func setShuffleMode(mode: String){
-        if(mode == "off"){
-            player.shuffleMode =  MPMusicShuffleMode.off
-        }
-        else if(mode == "songs"){
-            player.shuffleMode =  MPMusicShuffleMode.songs
+    func setShuffleMode(mode: String) throws {
+        switch mode {
+        case "off":
+            player.shuffleMode = .off
+        case "songs":
+            player.shuffleMode = .songs
+        default:
+            throw PlayifyError.runtimeError("Unsupported shuffle mode: \(mode)")
         }
     }
     
     ///Get the shuffle mode.
     func getShuffleMode() -> String? {
-        if(player.shuffleMode == MPMusicShuffleMode.off){
-            return "off"
-        }
-        else if(player.shuffleMode == MPMusicShuffleMode.songs){
+        switch player.shuffleMode {
+        case .songs:
             return "songs"
+        case .off, .default:
+            return "off"
+        case .albums:
+            return nil
+        @unknown default:
+            return nil
         }
-        return nil
     }
     
     ///Set a repeat mode.
-    func setRepeatMode(mode: String){
-        if(mode == "none"){
-            player.repeatMode =  MPMusicRepeatMode.none
-        }
-        else if(mode == "one"){
-            player.repeatMode =  MPMusicRepeatMode.one
-        }
-        else if(mode == "all"){
-            player.repeatMode = MPMusicRepeatMode.all
+    func setRepeatMode(mode: String) throws {
+        switch mode {
+        case "none":
+            player.repeatMode = .none
+        case "one":
+            player.repeatMode = .one
+        case "all":
+            player.repeatMode = .all
+        default:
+            throw PlayifyError.runtimeError("Unsupported repeat mode: \(mode)")
         }
     }
     
     ///Get the repeat mode.
     func getRepeatMode() -> String? {
-        if(player.repeatMode == MPMusicRepeatMode.none){
-            return "none"
-        }
-        else if(player.repeatMode ==  MPMusicRepeatMode.one){
+        switch player.repeatMode {
+        case .one:
             return "one"
-        }
-        else if(player.repeatMode == MPMusicRepeatMode.all){
+        case .all:
             return "all"
+        case .none, .default:
+            return "none"
+        @unknown default:
+            return nil
         }
-        return nil
     }
-    
+
     ///Play a song with an ID.
     func playItem(songID: String){
         let song = getMediaItemsWithIDs(songIDs: [songID])
         let descriptor = MPMusicPlayerMediaItemQueueDescriptor(itemCollection: MPMediaItemCollection(items: song))
-        
+
         player.setQueue(with: descriptor)
         player.prepareToPlay(completionHandler: {error in
             if error == nil {

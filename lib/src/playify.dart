@@ -1,7 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/services.dart';
 import 'package:playify/src/class/album/album.dart';
 import 'package:playify/src/class/artist/artist.dart';
@@ -20,20 +19,46 @@ enum PlayifyStatus {
   interrupted,
   seekingForward,
   seekingBackward,
-  unknown
+  unknown,
 }
 
 class Playify {
-  static const MethodChannel playerChannel =
-      MethodChannel('com.kaya.playify/playify');
-  static const EventChannel _eventChannel =
-      EventChannel('com.kaya.playify/playify_status');
+  factory Playify() => instance;
 
-  Stream<PlayifyStatus> get statusStream {
-    return _eventChannel
-        .receiveBroadcastStream()
-        .cast()
-        .map((event) => _intToStatus(event));
+  Playify._();
+
+  static final Playify instance = Playify._();
+
+  static const MethodChannel playerChannel = MethodChannel(
+    'com.kaya.playify/playify',
+  );
+  static const EventChannel _eventChannel = EventChannel(
+    'com.kaya.playify/playify_status',
+  );
+
+  late final Stream<PlayifyStatus> statusStream =
+      _eventChannel.receiveBroadcastStream().cast<int>().map(_intToStatus);
+
+  /// Fetches all songs as a flat list without loading artwork.
+  Future<List<Song>> getSongs() async {
+    final result = await playerChannel.invokeListMethod<Map>('getSongs');
+    return result
+            ?.map((song) => Song.fromJson(Map<String, dynamic>.from(song)))
+            .toList(growable: false) ??
+        const [];
+  }
+
+  /// Loads artwork for the song identified by [songID].
+  Future<Uint8List?> getArtwork({
+    required String songID,
+    required int width,
+    required int height,
+  }) {
+    return playerChannel.invokeMethod<Uint8List>('getArtwork', {
+      'songID': songID,
+      'width': width,
+      'height': height,
+    });
   }
 
   ///Set the queue by giving the [songIDs] desired to be added to the queue.
@@ -47,13 +72,14 @@ class Playify {
   }) async {
     if (!songIDs.contains(startID)) {
       throw PlatformException(
-          code: 'Incorrect Arguments!',
-          message: 'songIDs must contain startID if provided.');
+        code: 'Incorrect Arguments!',
+        message: 'songIDs must contain startID if provided.',
+      );
     }
     await playerChannel.invokeMethod('setQueue', <String, dynamic>{
       'songIDs': songIDs,
       'startPlaying': startPlaying,
-      'startID': startID
+      'startID': startID,
     });
   }
 
@@ -63,10 +89,8 @@ class Playify {
   }
 
   ///Play a single song by giving its [songID].
-  Future<void> playItem({required String songID}) async {
-    await playerChannel
-        .invokeMethod('playItem', <String, dynamic>{'songID': songID});
-  }
+  Future<void> playItem({required String songID}) =>
+      setQueue(songIDs: [songID], startID: songID);
 
   ///Pause playing.
   Future<void> pause() async {
@@ -114,8 +138,9 @@ class Playify {
 
   ///Set the playback [time] of the current song in the queue.
   Future<void> setPlaybackTime(double time) async {
-    await playerChannel
-        .invokeMethod('setPlaybackTime', <String, dynamic>{'time': time});
+    await playerChannel.invokeMethod('setPlaybackTime', <String, dynamic>{
+      'time': time,
+    });
   }
 
   ///Skip to the beginning of the current song.
@@ -139,63 +164,46 @@ class Playify {
 
   ///Set the shuffle [mode].
   Future<void> setShuffleMode(Shuffle mode) async {
-    var mymode = '';
-    switch (mode.index) {
-      case 0:
-        mymode = 'off';
-        break;
-      case 1:
-        mymode = 'songs';
-        break;
-      default:
-        throw 'Incorrent mode!';
-    }
-    await playerChannel
-        .invokeMethod('setShuffleMode', <String, dynamic>{'mode': mymode});
+    final nativeMode = switch (mode) {
+      Shuffle.off => 'off',
+      Shuffle.songs => 'songs',
+    };
+    await playerChannel.invokeMethod('setShuffleMode', <String, dynamic>{
+      'mode': nativeMode,
+    });
   }
 
   ///Get the shuffle mode.
   Future<Shuffle> getShuffleMode() async {
     final mode = await playerChannel.invokeMethod<String>('getShuffleMode');
-    if (mode == 'off') {
-      return Shuffle.off;
-    } else if (mode == 'songs') {
-      return Shuffle.songs;
-    }
-    throw 'Mode ' + (mode ?? '') + ' is not a valid shuffle mode!';
+    return switch (mode) {
+      'off' => Shuffle.off,
+      'songs' => Shuffle.songs,
+      _ => throw StateError('Invalid shuffle mode: $mode'),
+    };
   }
 
   ///Set the repeat [mode].
   Future<void> setRepeatMode(Repeat mode) async {
-    var mymode = '';
-    switch (mode.index) {
-      case 0:
-        mymode = 'none';
-        break;
-      case 1:
-        mymode = 'one';
-        break;
-      case 2:
-        mymode = 'all';
-        break;
-      default:
-        throw 'Incorrent mode!';
-    }
-    await playerChannel
-        .invokeMethod('setRepeatMode', <String, dynamic>{'mode': mymode});
+    final nativeMode = switch (mode) {
+      Repeat.none => 'none',
+      Repeat.one => 'one',
+      Repeat.all => 'all',
+    };
+    await playerChannel.invokeMethod('setRepeatMode', <String, dynamic>{
+      'mode': nativeMode,
+    });
   }
 
   ///Get the repeat mode.
   Future<Repeat> getRepeatMode() async {
     final mode = await playerChannel.invokeMethod<String>('getRepeatMode');
-    if (mode == 'all') {
-      return Repeat.all;
-    } else if (mode == 'one') {
-      return Repeat.one;
-    } else if (mode == 'none') {
-      return Repeat.none;
-    }
-    throw 'Mode ' + (mode ?? '') + ' is not a valid repeat mode!';
+    return switch (mode) {
+      'none' => Repeat.none,
+      'one' => Repeat.one,
+      'all' => Repeat.all,
+      _ => throw StateError('Invalid repeat mode: $mode'),
+    };
   }
 
   ///Fetch all songs in the Apple Music library.
@@ -208,35 +216,30 @@ class Playify {
   ///enough memory. In this case, the [coverArtSize] should be reduced.
   ///
   ///[sort] can be set to true in order to sort the artists alphabetically.
-  Future<List<Artist>> getAllSongs(
-      {bool sort = false, int coverArtSize = 500}) async {
+  Future<List<Artist>> getAllSongs({
+    bool sort = false,
+    int coverArtSize = 500,
+  }) async {
     final artists = <Artist>[];
-    final result = await playerChannel
-        .invokeMethod('getAllSongs', <String, dynamic>{'size': coverArtSize});
+    final result = await playerChannel.invokeMethod(
+      'getAllSongs',
+      <String, dynamic>{'size': coverArtSize},
+    );
     for (var a = 0; a < result.length; a++) {
       final resobj = Map<String, dynamic>.from(result[a]);
       final artist = Artist(albums: [], name: resobj['artist']);
-      Uint8List? image;
-      if (Platform.isIOS) {
-        if (resobj['image'] != null) {
-          image = Uint8List.fromList(List<int>.from(resobj['image']));
-        }
-      } else if (Platform.isAndroid) {
-        final String? imageFilePath = resobj['imagePath'];
-        if (imageFilePath != null) {
-          final imageFile = File(imageFilePath);
-          if (await imageFile.exists()) {
-            image = await imageFile.readAsBytes();
-          }
-        }
-      }
+      final imageData = resobj['image'];
+      final image = imageData == null
+          ? null
+          : Uint8List.fromList(List<int>.from(imageData));
       final album = Album(
-          songs: [],
-          title: resobj['albumTitle'],
-          albumTrackCount: resobj['albumTrackCount'] ?? 0,
-          coverArt: image,
-          discCount: resobj['discCount'] ?? 0,
-          artistName: artist.name);
+        songs: [],
+        title: resobj['albumTitle'],
+        albumTrackCount: resobj['albumTrackCount'] ?? 0,
+        coverArt: image,
+        discCount: resobj['discCount'] ?? 0,
+        artistName: artist.name,
+      );
       final song = Song.fromJson(resobj);
       album.songs.add(song);
       artist.albums.add(album);
@@ -255,10 +258,9 @@ class Playify {
                 album.coverArt = artists[i].albums[j].coverArt = album.coverArt;
               }
               artists[i].albums[j].songs.add(song);
-              artists[i]
-                  .albums[j]
-                  .songs
-                  .sort((a, b) => a.trackNumber - b.trackNumber);
+              artists[i].albums[j].songs.sort(
+                    (a, b) => a.trackNumber - b.trackNumber,
+                  );
               foundAlbum = true;
               break;
             }
@@ -281,8 +283,10 @@ class Playify {
   ///
   ///Specify a [coverArtSize] to fetch the current song with the [coverArtSize].
   Future<SongInformation?> nowPlaying({int coverArtSize = 800}) async {
-    final result = await playerChannel
-        .invokeMethod('nowPlaying', <String, dynamic>{'size': coverArtSize});
+    final result = await playerChannel.invokeMethod(
+      'nowPlaying',
+      <String, dynamic>{'size': coverArtSize},
+    );
     if (result == null) {
       return null;
     }
@@ -293,12 +297,13 @@ class Playify {
       coverArt = resobj['image'];
     } catch (_) {}
     final album = Album(
-        songs: [],
-        title: resobj['albumTitle'],
-        albumTrackCount: resobj['albumTrackCount'] ?? 0,
-        coverArt: coverArt,
-        discCount: resobj['discCount'] ?? 0,
-        artistName: artist.name);
+      songs: [],
+      title: resobj['albumTitle'],
+      albumTrackCount: resobj['albumTrackCount'] ?? 0,
+      coverArt: coverArt,
+      discCount: resobj['discCount'] ?? 0,
+      artistName: artist.name,
+    );
     final song = Song.fromJson(resobj);
     album.songs.add(song);
     artist.albums.add(album);
@@ -309,17 +314,23 @@ class Playify {
 
   ///Get all the playlists.
   Future<List<Playlist>?> getPlaylists() async {
-    final result =
-        await playerChannel.invokeMethod<List<dynamic>>('getPlaylists');
+    final result = await playerChannel.invokeMethod<List<dynamic>>(
+      'getPlaylists',
+    );
     final playlistMaps =
         result?.map((i) => Map<String, dynamic>.from(i)).toList();
     final playlists = playlistMaps
-        ?.map<Playlist>((i) => Playlist(
-              songs: List<Song>.from(i['songs']
-                  .map((j) => Song.fromJson(Map<String, dynamic>.from(j)))),
-              title: i['title'],
-              playlistID: i['playlistID'].toString(),
-            ))
+        ?.map<Playlist>(
+          (i) => Playlist(
+            songs: List<Song>.from(
+              i['songs'].map(
+                (j) => Song.fromJson(Map<String, dynamic>.from(j)),
+              ),
+            ),
+            title: i['title'],
+            playlistID: i['playlistID'].toString(),
+          ),
+        )
         .toList();
     return playlists;
   }
@@ -329,8 +340,9 @@ class Playify {
   ///The audio is set using MPVolumeView, so the volume changing indicator
   ///will appear in the left side of the device on iOS.
   Future<void> setVolume(double value) async {
-    await playerChannel
-        .invokeMethod<void>('setVolume', <String, dynamic>{'volume': value});
+    await playerChannel.invokeMethod<void>('setVolume', <String, dynamic>{
+      'volume': value,
+    });
   }
 
   ///Get the volume between 0 to 1.
@@ -347,7 +359,9 @@ class Playify {
   ///If the current volume + [amount] is under 0, the volume will be set to 0.
   Future<void> incrementVolume(double amount) async {
     await playerChannel.invokeMethod<double>(
-        'incrementVolume', <String, dynamic>{'amount': amount});
+      'incrementVolume',
+      <String, dynamic>{'amount': amount},
+    );
   }
 
   ///Get all the genres in the Apple Music library.
@@ -358,11 +372,14 @@ class Playify {
 
   ///Get all the songs in the Apple Music library with the [genre].
   ///Specify a [coverArtSize] to fetch the current song with that [coverArtSize].
-  Future<List<Song>> getSongsByGenre(
-      {required String genre, int coverArtSize = 500}) async {
+  Future<List<Song>> getSongsByGenre({
+    required String genre,
+    int coverArtSize = 500,
+  }) async {
     final result = await playerChannel.invokeMethod<List<dynamic>>(
-        'getSongsByGenre',
-        <String, dynamic>{'genre': genre, 'size': coverArtSize});
+      'getSongsByGenre',
+      <String, dynamic>{'genre': genre, 'size': coverArtSize},
+    );
     final songs = <Song>[];
     if (result != null) {
       for (var i = 0; i < result.length; i++) {
